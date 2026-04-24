@@ -102,7 +102,8 @@ h3 {
 }
 
 .brand-block p,
-.sidebar-panel p {
+.sidebar-panel p,
+.sync-panel p {
   color: rgba(248, 251, 250, 0.72);
   line-height: 1.45;
 }
@@ -136,7 +137,8 @@ h3 {
   color: #ffffff;
 }
 
-.sidebar-panel {
+.sidebar-panel,
+.sync-panel {
   margin-top: auto;
   background: rgba(255, 255, 255, 0.09);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -144,6 +146,14 @@ h3 {
   padding: 16px;
   display: grid;
   gap: 8px;
+}
+
+.sync-panel {
+  margin-top: 0;
+}
+
+.sync-panel strong {
+  color: #ffffff;
 }
 
 .workspace {

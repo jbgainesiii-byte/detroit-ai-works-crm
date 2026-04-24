@@ -31,6 +31,12 @@
           <strong id="nextActionTitle">Add your first prospect</strong>
           <p id="nextActionCopy">Start with one niche and one city so your outreach stays focused.</p>
         </div>
+
+        <div class="sync-panel">
+          <span class="eyebrow">Sync</span>
+          <strong id="syncStatus">Connecting</strong>
+          <p id="syncCopy">Checking shared Supabase database...</p>
+        </div>
       </aside>
 
       <main class="workspace">
@@ -192,7 +198,7 @@
                   <h3>Import CRM Data</h3>
                 </div>
               </div>
-              <p class="muted">Import a CSV from Google Sheets or a JSON export. Existing records are replaced.</p>
+              <p class="muted">Import a CSV from Google Sheets or a JSON export. Records are added to the shared database.</p>
               <label class="file-picker">
                 <input id="importInput" type="file" accept=".csv,application/json,text/csv" />
                 Choose CSV or JSON
