@@ -12,6 +12,32 @@ const stages = [
   "Launched",
 ];
 
+const stageDetails = {
+  Found: "Lead has been discovered but not yet reviewed.",
+  Qualified: "Business looks like a good fit and has a clear website problem.",
+  "Demo Built": "A mockup, preview, or improvement concept is ready.",
+  "First Email Sent": "Initial personalized outreach has been sent.",
+  "Follow-Up 1": "First follow-up is due or has been sent.",
+  "Follow-Up 2": "Second follow-up is due or has been sent.",
+  Interested: "They replied or showed buying interest.",
+  "Proposal Sent": "Price and scope have been sent.",
+  Won: "Client agreed, paid, or committed to move forward.",
+  Lost: "Not a fit, declined, or went cold.",
+  Launched: "Project is complete and the site is live.",
+};
+
+const stageAdvancement = {
+  Found: { stage: "Qualified", label: "Qualify", days: 1, nextStep: "Build or prepare a quick demo concept." },
+  Qualified: { stage: "Demo Built", label: "Mark Demo Built", days: 1, nextStep: "Send first personalized outreach email." },
+  "Demo Built": { stage: "First Email Sent", label: "Mark Email Sent", days: 2, nextStep: "Follow up with the demo link." },
+  "First Email Sent": { stage: "Follow-Up 1", label: "Move to Follow-Up 1", days: 3, nextStep: "Send first follow-up." },
+  "Follow-Up 1": { stage: "Follow-Up 2", label: "Move to Follow-Up 2", days: 4, nextStep: "Send final follow-up or close out." },
+  "Follow-Up 2": { stage: "Interested", label: "Mark Interested", days: 1, nextStep: "Ask discovery questions and confirm scope." },
+  Interested: { stage: "Proposal Sent", label: "Send Proposal", days: 2, nextStep: "Follow up on proposal." },
+  "Proposal Sent": { stage: "Won", label: "Mark Won", days: 1, nextStep: "Collect assets and begin build." },
+  Won: { stage: "Launched", label: "Mark Launched", days: 0, nextStep: "Offer care plan and ask for referral." },
+};
+
 const starterProspects = [
   {
     id: crypto.randomUUID(),
@@ -27,6 +53,9 @@ const starterProspects = [
     followUp: todayPlus(1),
     score: 84,
     quote: "$1,500 Local Business Site",
+    assignedTo: "JB",
+    nextStep: "Send first personalized email with demo link.",
+    lastContacted: "",
     issue: "Current site is hard to scan on mobile and does not show a clear quote request path.",
     notes: "Lead found from Google Maps. Good before/after gallery opportunity.",
     updatedAt: new Date().toISOString(),
@@ -45,6 +74,9 @@ const starterProspects = [
     followUp: todayPlus(3),
     score: 72,
     quote: "$900 Starter Refresh",
+    assignedTo: "JaVont",
+    nextStep: "Build homepage concept before first email.",
+    lastContacted: "",
     issue: "No click-to-call button, outdated service list, and weak trust signals above the fold.",
     notes: "Target pain point: customers comparing nearby repair shops on phone.",
     updatedAt: new Date().toISOString(),
@@ -63,6 +95,9 @@ const starterProspects = [
     followUp: todayPlus(0),
     score: 91,
     quote: "$2,200 Website + Booking",
+    assignedTo: "JB",
+    nextStep: "Ask discovery questions and confirm booking needs.",
+    lastContacted: todayPlus(-1),
     issue: "Instagram has the brand energy, but the website does not make booking obvious.",
     notes: "Mention online booking and service menu clarity in outreach.",
     updatedAt: new Date().toISOString(),
@@ -216,6 +251,7 @@ const elements = {
   rebuttalList: document.querySelector("#rebuttalList"),
   promptList: document.querySelector("#promptList"),
   packageList: document.querySelector("#packageList"),
+  stageGuide: document.querySelector("#stageGuide"),
 };
 
 const fields = [
@@ -232,6 +268,9 @@ const fields = [
   "followUp",
   "score",
   "quote",
+  "assignedTo",
+  "nextStep",
+  "lastContacted",
   "issue",
   "notes",
 ].reduce((acc, id) => {
@@ -313,6 +352,19 @@ function renderPlaybook() {
             <span class="badge hot">${escapeHtml(item.price)}</span>
           </div>
           <p>${escapeHtml(item.body)}</p>
+        </article>
+      `
+    )
+    .join("");
+  elements.stageGuide.innerHTML = stages
+    .map(
+      (stage) => `
+        <article class="stage-guide-card">
+          <div class="item-row">
+            <strong>${escapeHtml(stage)}</strong>
+            ${stageAdvancement[stage] ? `<span class="badge">${escapeHtml(stageAdvancement[stage].label)}</span>` : ""}
+          </div>
+          <p>${escapeHtml(stageDetails[stage] || "")}</p>
         </article>
       `
     )
@@ -415,10 +467,21 @@ function renderPipelineCard(item) {
       </div>
       <p class="item-meta">${escapeHtml(item.niche || "Uncategorized")} · ${escapeHtml(item.city || "No city")}</p>
       <p>${escapeHtml(item.issue || "No issue recorded.")}</p>
-      <p class="item-meta">Follow-up: ${formatDate(item.followUp)}</p>
-      <button class="text-button" data-edit="${item.id}" type="button">Open record</button>
+      <p class="item-meta">Owner: ${escapeHtml(item.assignedTo || "Unassigned")} · Follow-up: ${formatDate(item.followUp)}</p>
+      <p class="item-meta">Next: ${escapeHtml(item.nextStep || stageAdvancement[item.stage]?.nextStep || "Open record and choose the next step.")}</p>
+      <div class="card-actions">
+        ${renderAdvanceButton(item)}
+        <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Mark Lost</button>
+        <button class="text-button" data-edit="${item.id}" type="button">Open record</button>
+      </div>
     </article>
   `;
+}
+
+function renderAdvanceButton(item) {
+  const next = stageAdvancement[item.stage];
+  if (!next) return "";
+  return `<button class="mini-button primary-mini" data-advance="${item.id}" type="button">${escapeHtml(next.label)}</button>`;
 }
 
 function renderStageFilters() {
@@ -456,9 +519,19 @@ function renderProspectTable() {
           <td><span class="badge good">${escapeHtml(item.stage)}</span></td>
           <td><span class="badge ${item.score >= 80 ? "hot" : ""}">${Number(item.score || 0)}</span></td>
           <td>${escapeHtml(item.issue || "No issue recorded.")}</td>
-          <td>${formatDate(item.followUp)}</td>
+          <td>
+            ${formatDate(item.followUp)}
+            <div class="item-meta">Owner: ${escapeHtml(item.assignedTo || "Unassigned")}</div>
+            <div class="item-meta">Next: ${escapeHtml(item.nextStep || stageAdvancement[item.stage]?.nextStep || "Choose next step")}</div>
+          </td>
           <td>${item.demoUrl ? `<a href="${escapeAttr(item.demoUrl)}" target="_blank" rel="noreferrer">Open demo</a>` : `<span class="item-meta">No demo</span>`}</td>
-          <td><button class="text-button" data-edit="${item.id}" type="button">Edit</button></td>
+          <td>
+            <div class="row-actions">
+              ${renderAdvanceButton(item)}
+              <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Lost</button>
+              <button class="text-button" data-edit="${item.id}" type="button">Edit</button>
+            </div>
+          </td>
         </tr>
       `
     )
@@ -487,9 +560,23 @@ function renderNextAction() {
 }
 
 document.addEventListener("click", (event) => {
+  const advanceButton = event.target.closest("[data-advance]");
+  if (advanceButton) {
+    advanceProspectStage(advanceButton.dataset.advance);
+    return;
+  }
+
+  const stageButton = event.target.closest("[data-stage]");
+  if (stageButton) {
+    const [id, stage] = stageButton.dataset.stage.split("|");
+    setProspectStage(id, stage, { nextStep: "Closed out. No next action needed." });
+    return;
+  }
+
   const editButton = event.target.closest("[data-edit]");
   if (editButton) {
     openProspectDialog(editButton.dataset.edit);
+    return;
   }
 
   const copyButton = event.target.closest("[data-copy]");
@@ -542,6 +629,9 @@ async function saveProspect(event) {
     followUp: fields.followUp.value,
     score: Number(fields.score.value || 0),
     quote: fields.quote.value.trim(),
+    assignedTo: fields.assignedTo.value.trim(),
+    nextStep: fields.nextStep.value.trim(),
+    lastContacted: fields.lastContacted.value,
     issue: fields.issue.value.trim(),
     notes: fields.notes.value.trim(),
     updatedAt: new Date().toISOString(),
@@ -593,6 +683,53 @@ async function deleteCurrentProspect() {
   prospects = prospects.filter((prospect) => prospect.id !== id);
   persist();
   render();
+}
+
+async function advanceProspectStage(id) {
+  const item = prospects.find((prospect) => prospect.id === id);
+  const next = item ? stageAdvancement[item.stage] : null;
+  if (!item || !next) return;
+
+  await setProspectStage(id, next.stage, {
+    followUp: next.days ? todayPlus(next.days) : "",
+    nextStep: next.nextStep,
+    lastContacted: ["First Email Sent", "Follow-Up 1", "Follow-Up 2", "Proposal Sent"].includes(next.stage)
+      ? todayPlus(0)
+      : item.lastContacted || "",
+  });
+}
+
+async function setProspectStage(id, stage, overrides = {}) {
+  const index = prospects.findIndex((prospect) => prospect.id === id);
+  if (index < 0) return;
+
+  const previous = prospects[index];
+  const record = {
+    ...previous,
+    stage,
+    followUp: overrides.followUp ?? previous.followUp,
+    nextStep: overrides.nextStep ?? previous.nextStep,
+    lastContacted: overrides.lastContacted ?? previous.lastContacted,
+    updatedAt: new Date().toISOString(),
+  };
+
+  prospects[index] = record;
+  persist();
+  render();
+  setSyncStatus("Saving", `Moving ${record.businessName} to ${stage}...`);
+
+  try {
+    const saved = await upsertSharedProspect(record);
+    prospects[index] = saved;
+    persist();
+    render();
+    setSyncStatus("Shared", `${saved.businessName} is now ${saved.stage}.`);
+  } catch {
+    prospects[index] = previous;
+    persist();
+    render();
+    setSyncStatus("Check database", "Stage move failed. Add the new Supabase columns, then try again.");
+  }
 }
 
 function populateStageSelect() {
@@ -728,6 +865,9 @@ function toSupabaseRow(item) {
     follow_up: item.followUp || null,
     score: Number(item.score || 0),
     quote: item.quote,
+    assigned_to: item.assignedTo,
+    next_step: item.nextStep,
+    last_contacted: item.lastContacted || null,
     issue: item.issue,
     notes: item.notes,
     updated_at: new Date().toISOString(),
@@ -749,6 +889,9 @@ function fromSupabaseRow(row) {
     followUp: row.follow_up || "",
     score: Number(row.score || 0),
     quote: row.quote || "",
+    assignedTo: row.assigned_to || "",
+    nextStep: row.next_step || "",
+    lastContacted: row.last_contacted || "",
     issue: row.issue || "",
     notes: row.notes || "",
     updatedAt: row.updated_at || row.created_at || new Date().toISOString(),
@@ -785,6 +928,9 @@ function downloadCsv() {
     "followUp",
     "score",
     "quote",
+    "assignedTo",
+    "nextStep",
+    "lastContacted",
     "issue",
     "notes",
   ];
@@ -846,6 +992,9 @@ function normalizeImportedProspect(item) {
     followUp: item.followUp || item.followUpDate || "",
     score: Number(item.score || item.fitScore || 0),
     quote: item.quote || item.package || "",
+    assignedTo: item.assignedTo || item.owner || item.rep || "",
+    nextStep: item.nextStep || item.nextAction || item.task || "",
+    lastContacted: item.lastContacted || item.lastTouch || item.lastContact || "",
     issue: item.issue || item.websiteIssue || item.problem || "",
     notes: item.notes || "",
     updatedAt: item.updatedAt || new Date().toISOString(),
