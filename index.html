@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detroit AI Works CRM</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="CRM navigation">
+        <div class="brand-block">
+          <div class="brand-mark">DAW</div>
+          <div>
+            <p class="brand-kicker">Detroit AI Works</p>
+            <h1>Outreach CRM</h1>
+            <p>Demo-first website sales</p>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Views">
+          <button class="nav-tab active" data-view="dashboard" type="button">Dashboard</button>
+          <button class="nav-tab" data-view="pipeline" type="button">Pipeline</button>
+          <button class="nav-tab" data-view="prospects" type="button">Prospects</button>
+          <button class="nav-tab" data-view="playbook" type="button">Playbook</button>
+          <button class="nav-tab" data-view="settings" type="button">Data</button>
+        </nav>
+
+        <div class="sidebar-panel">
+          <span class="eyebrow">Next Action</span>
+          <strong id="nextActionTitle">Add your first prospect</strong>
+          <p id="nextActionCopy">Start with one niche and one city so your outreach stays focused.</p>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Detroit AI Works</p>
+            <h2 id="viewTitle">Dashboard</h2>
+          </div>
+
+          <div class="topbar-actions">
+            <label class="search-control">
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="Business, niche, city, owner..." />
+            </label>
+            <button class="secondary-button" id="exportButton" type="button">Export CSV</button>
+            <button class="primary-button" id="addProspectButton" type="button">New Prospect</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView" aria-labelledby="dashboard-title">
+          <section class="hero-band" aria-label="Operating rhythm">
+            <div>
+              <p class="eyebrow">Daily Flow</p>
+              <h3>Find the lead, build the proof, send the next touch.</h3>
+            </div>
+            <div class="flow-steps" aria-label="Daily workflow steps">
+              <span>1. Qualify</span>
+              <span>2. Mock up</span>
+              <span>3. Follow up</span>
+            </div>
+          </section>
+
+          <div class="metric-grid" id="metricGrid"></div>
+
+          <div class="two-column">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Focus List</p>
+                  <h3 id="dashboard-title">Follow-ups Due</h3>
+                </div>
+                <button class="text-button" id="showDueButton" type="button">Show all</button>
+              </div>
+              <div class="stack-list" id="dueList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Hot Leads</p>
+                  <h3>Interested Prospects</h3>
+                </div>
+              </div>
+              <div class="stack-list" id="hotList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="pipelineView" aria-label="Pipeline board">
+          <div class="pipeline-board" id="pipelineBoard"></div>
+        </section>
+
+        <section class="view" id="prospectsView" aria-label="Prospect table">
+          <div class="table-tools">
+            <div class="filter-group" id="stageFilters"></div>
+            <select id="sortSelect" aria-label="Sort prospects">
+              <option value="updatedDesc">Recently updated</option>
+              <option value="followUpAsc">Follow-up date</option>
+              <option value="scoreDesc">Highest score</option>
+              <option value="businessAsc">Business name</option>
+            </select>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Business</th>
+                  <th>Stage</th>
+                  <th>Score</th>
+                  <th>Website Issue</th>
+                  <th>Follow-up</th>
+                  <th>Demo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="prospectRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="view" id="playbookView" aria-label="Outreach playbook">
+          <div class="playbook-layout">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Day One Sales Kit</p>
+                  <h3>Scripts</h3>
+                </div>
+              </div>
+              <div class="playbook-list" id="scriptList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Objection Handling</p>
+                  <h3>Rebuttals</h3>
+                </div>
+              </div>
+              <div class="playbook-list" id="rebuttalList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Discovery</p>
+                  <h3>Call Prompts</h3>
+                </div>
+              </div>
+              <div class="prompt-grid" id="promptList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Simple Offers</p>
+                  <h3>Packages</h3>
+                </div>
+              </div>
+              <div class="package-grid" id="packageList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView" aria-label="Data tools">
+          <div class="settings-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Backup</p>
+                  <h3>Export CRM Data</h3>
+                </div>
+              </div>
+              <p class="muted">Download a spreadsheet-ready CSV or a JSON backup of every prospect in this browser.</p>
+              <div class="button-row">
+                <button class="primary-button" id="downloadCsvButton" type="button">Download CSV</button>
+                <button class="secondary-button" id="downloadJsonButton" type="button">Download JSON</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Restore</p>
+                  <h3>Import CRM Data</h3>
+                </div>
+              </div>
+              <p class="muted">Import a CSV from Google Sheets or a JSON export. Existing records are replaced.</p>
+              <label class="file-picker">
+                <input id="importInput" type="file" accept=".csv,application/json,text/csv" />
+                Choose CSV or JSON
+              </label>
+            </section>
+
+            <section class="panel danger-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Reset</p>
+                  <h3>Clear Local Data</h3>
+                </div>
+              </div>
+              <p class="muted">This removes prospects stored in this browser and reloads the starter examples.</p>
+              <button class="danger-button" id="resetButton" type="button">Reset CRM</button>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="prospectDialog">
+      <form id="prospectForm" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Prospect Record</p>
+            <h3 id="dialogTitle">New Prospect</h3>
+          </div>
+          <button class="icon-button" id="closeDialogButton" type="button" aria-label="Close">×</button>
+        </div>
+
+        <input id="recordId" type="hidden" />
+
+        <div class="form-grid">
+          <label>
+            Business Name
+            <input id="businessName" name="businessName" required />
+          </label>
+          <label>
+            Niche
+            <input id="niche" name="niche" placeholder="Landscaping, salon, dentist..." />
+          </label>
+          <label>
+            City / Market
+            <input id="city" name="city" />
+          </label>
+          <label>
+            Contact Name
+            <input id="contactName" name="contactName" />
+          </label>
+          <label>
+            Email
+            <input id="email" name="email" type="email" />
+          </label>
+          <label>
+            Phone
+            <input id="phone" name="phone" />
+          </label>
+          <label>
+            Current Website
+            <input id="website" name="website" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            Demo URL
+            <input id="demoUrl" name="demoUrl" type="url" placeholder="https://..." />
+          </label>
+          <label>
+            Stage
+            <select id="stage" name="stage"></select>
+          </label>
+          <label>
+            Follow-up Date
+            <input id="followUp" name="followUp" type="date" />
+          </label>
+          <label>
+            Fit Score
+            <input id="score" name="score" type="number" min="0" max="100" value="50" />
+          </label>
+          <label>
+            Package / Quote
+            <input id="quote" name="quote" placeholder="$1,500 Local Business Site" />
+          </label>
+        </div>
+
+        <label>
+          Website Issue
+          <textarea id="issue" name="issue" rows="3" placeholder="Hard to use on mobile, no clear contact button, outdated photos..."></textarea>
+        </label>
+
+        <label>
+          Notes
+          <textarea id="notes" name="notes" rows="4" placeholder="Conversation notes, objections, owner preferences, next step..."></textarea>
+        </label>
+
+        <div class="dialog-actions">
+          <button class="danger-button hidden" id="deleteButton" type="button">Delete</button>
+          <div class="spacer"></div>
+          <button class="secondary-button" id="cancelButton" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Save Prospect</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
