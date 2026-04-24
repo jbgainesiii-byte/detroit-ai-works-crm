@@ -176,6 +176,7 @@ let activeStageFilter = "All";
 const elements = {
   navTabs: document.querySelectorAll(".nav-tab"),
   viewTitle: document.querySelector("#viewTitle"),
+  viewPill: document.querySelector("#viewPill"),
   views: {
     dashboard: document.querySelector("#dashboardView"),
     pipeline: document.querySelector("#pipelineView"),
@@ -272,7 +273,9 @@ function bindEvents() {
 
 function switchView(viewName) {
   activeView = viewName;
-  elements.viewTitle.textContent = viewName === "playbook" ? "Playbook" : titleCase(viewName);
+  const label = getViewLabel(viewName);
+  elements.viewTitle.textContent = label;
+  elements.viewPill.textContent = label;
   elements.navTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.view === viewName);
   });
@@ -823,6 +826,17 @@ function dateValue(value) {
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getViewLabel(value) {
+  const labels = {
+    dashboard: "Dashboard",
+    pipeline: "Pipeline",
+    prospects: "Prospects",
+    playbook: "Playbook",
+    settings: "Data",
+  };
+  return labels[value] || titleCase(value);
 }
 
 function normalizeUrl(value) {
