@@ -169,13 +169,17 @@ Either way, here is the concept one more time:
 
 const storageKey = "detroit-ai-works-crm:v1";
 const legacyStorageKey = "website-outreach-crm:v1";
-let prospects = loadProspects();
+const supabaseUrl = "https://netdshxconokwuhgbuow.supabase.co";
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ldGRzaHhjb25va3d1aGdidW93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwNDQ5MjksImV4cCI6MjA5MjYyMDkyOX0.FaBwviIW0PYPZaW4Y3OEiAbNjKfw7_kRzgQ69M-Eqrc";
+let prospects = loadLocalProspects();
 let activeView = "dashboard";
 let activeStageFilter = "All";
 
 const elements = {
   navTabs: document.querySelectorAll(".nav-tab"),
   viewTitle: document.querySelector("#viewTitle"),
+  viewPill: document.querySelector("#viewPill"),
   views: {
     dashboard: document.querySelector("#dashboardView"),
     pipeline: document.querySelector("#pipelineView"),
@@ -196,6 +200,8 @@ const elements = {
   prospectRows: document.querySelector("#prospectRows"),
   nextActionTitle: document.querySelector("#nextActionTitle"),
   nextActionCopy: document.querySelector("#nextActionCopy"),
+  syncStatus: document.querySelector("#syncStatus"),
+  syncCopy: document.querySelector("#syncCopy"),
   dialog: document.querySelector("#prospectDialog"),
   form: document.querySelector("#prospectForm"),
   dialogTitle: document.querySelector("#dialogTitle"),
@@ -235,12 +241,13 @@ const fields = [
 
 initialize();
 
-function initialize() {
+async function initialize() {
   populateStageSelect();
   renderStageFilters();
   renderPlaybook();
   bindEvents();
   render();
+  await loadSharedProspects();
 }
 
 function bindEvents() {
@@ -272,7 +279,9 @@ function bindEvents() {
 
 function switchView(viewName) {
   activeView = viewName;
-  elements.viewTitle.textContent = viewName === "playbook" ? "Playbook" : titleCase(viewName);
+  const label = getViewLabel(viewName);
+  elements.viewTitle.textContent = label;
+  elements.viewPill.textContent = label;
   elements.navTabs.forEach((tab) => {
     tab.classList.toggle("active", tab.dataset.view === viewName);
   });
@@ -515,7 +524,7 @@ function closeDialog() {
   elements.dialog.close();
 }
 
-function saveProspect(event) {
+async function saveProspect(event) {
   event.preventDefault();
   const id = fields.recordId.value || crypto.randomUUID();
   const existingIndex = prospects.findIndex((item) => item.id === id);
@@ -538,27 +547,51 @@ function saveProspect(event) {
     updatedAt: new Date().toISOString(),
   };
 
-  if (existingIndex >= 0) {
-    prospects[existingIndex] = record;
-  } else {
-    prospects.unshift(record);
-  }
-
-  persist();
   closeDialog();
-  render();
+  setSyncStatus("Saving", "Updating the shared Supabase database...");
+
+  try {
+    const saved = await upsertSharedProspect(record);
+    if (existingIndex >= 0) {
+      prospects[existingIndex] = saved;
+    } else {
+      prospects.unshift(saved);
+    }
+    persist();
+    render();
+    setSyncStatus("Shared", "Changes are saved to Supabase.");
+  } catch {
+    if (existingIndex >= 0) {
+      prospects[existingIndex] = record;
+    } else {
+      prospects.unshift(record);
+    }
+    persist();
+    render();
+    setSyncStatus("Local backup", "Supabase save failed, so this browser kept a local copy.");
+  }
 }
 
-function deleteCurrentProspect() {
+async function deleteCurrentProspect() {
   const id = fields.recordId.value;
   if (!id) return;
 
   const item = prospects.find((prospect) => prospect.id === id);
   if (!item || !confirm(`Delete ${item.businessName}?`)) return;
 
+  closeDialog();
+  setSyncStatus("Deleting", "Removing this record from Supabase...");
+
+  try {
+    await deleteSharedProspect(id);
+    setSyncStatus("Shared", "Record deleted from Supabase.");
+  } catch {
+    setSyncStatus("Check database", "Delete failed in Supabase. Refresh before continuing.");
+    return;
+  }
+
   prospects = prospects.filter((prospect) => prospect.id !== id);
   persist();
-  closeDialog();
   render();
 }
 
@@ -613,7 +646,21 @@ function getDueProspects() {
     .sort((a, b) => dateValue(a.followUp) - dateValue(b.followUp));
 }
 
-function loadProspects() {
+async function loadSharedProspects() {
+  setSyncStatus("Connecting", "Loading shared prospects from Supabase...");
+
+  try {
+    const rows = await supabaseRequest("/rest/v1/prospects?select=*&order=updated_at.desc");
+    prospects = rows.map(fromSupabaseRow);
+    persist();
+    render();
+    setSyncStatus("Shared", `${prospects.length} prospects loaded from Supabase.`);
+  } catch {
+    setSyncStatus("Local backup", "Could not reach Supabase. Showing this browser's saved data.");
+  }
+}
+
+function loadLocalProspects() {
   const saved = localStorage.getItem(storageKey) || localStorage.getItem(legacyStorageKey);
   if (!saved) return starterProspects;
 
@@ -627,6 +674,90 @@ function loadProspects() {
 
 function persist() {
   localStorage.setItem(storageKey, JSON.stringify(prospects));
+}
+
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${supabaseUrl}${path}`, {
+    ...options,
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${supabaseAnonKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Supabase request failed: ${response.status}`);
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+async function upsertSharedProspect(record) {
+  const rows = await supabaseRequest("/rest/v1/prospects?on_conflict=id", {
+    method: "POST",
+    body: JSON.stringify(toSupabaseRow(record)),
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=representation",
+    },
+  });
+  return fromSupabaseRow(rows[0]);
+}
+
+async function deleteSharedProspect(id) {
+  await supabaseRequest(`/rest/v1/prospects?id=eq.${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+function toSupabaseRow(item) {
+  return {
+    id: item.id,
+    business_name: item.businessName,
+    niche: item.niche,
+    city: item.city,
+    contact_name: item.contactName,
+    email: item.email,
+    phone: item.phone,
+    website: item.website,
+    demo_url: item.demoUrl,
+    stage: item.stage,
+    follow_up: item.followUp || null,
+    score: Number(item.score || 0),
+    quote: item.quote,
+    issue: item.issue,
+    notes: item.notes,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function fromSupabaseRow(row) {
+  return {
+    id: row.id,
+    businessName: row.business_name || "",
+    niche: row.niche || "",
+    city: row.city || "",
+    contactName: row.contact_name || "",
+    email: row.email || "",
+    phone: row.phone || "",
+    website: row.website || "",
+    demoUrl: row.demo_url || "",
+    stage: row.stage || "Found",
+    followUp: row.follow_up || "",
+    score: Number(row.score || 0),
+    quote: row.quote || "",
+    issue: row.issue || "",
+    notes: row.notes || "",
+    updatedAt: row.updated_at || row.created_at || new Date().toISOString(),
+  };
+}
+
+function setSyncStatus(status, copy) {
+  elements.syncStatus.textContent = status;
+  elements.syncCopy.textContent = copy;
 }
 
 function downloadJson() {
@@ -673,17 +804,25 @@ function importJson(event) {
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const parsed = file.name.toLowerCase().endsWith(".csv")
         ? parseCsv(reader.result)
         : JSON.parse(reader.result);
       if (!Array.isArray(parsed)) throw new Error("Expected an array");
-      prospects = parsed.map(normalizeImportedProspect);
+      const imported = parsed.map(normalizeImportedProspect);
+      setSyncStatus("Importing", `Adding ${imported.length} records to Supabase...`);
+      const rows = await supabaseRequest("/rest/v1/prospects", {
+        method: "POST",
+        body: JSON.stringify(imported.map(toSupabaseRow)),
+      });
+      prospects = [...rows.map(fromSupabaseRow), ...prospects];
       persist();
       render();
-      alert("CRM data imported.");
+      setSyncStatus("Shared", `${imported.length} imported records saved to Supabase.`);
+      alert("CRM data imported into the shared database.");
     } catch {
+      setSyncStatus("Import failed", "Check the CSV format or Supabase table setup.");
       alert("That file could not be imported. Please choose a valid CRM CSV or JSON export.");
     } finally {
       elements.importInput.value = "";
@@ -823,6 +962,17 @@ function dateValue(value) {
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getViewLabel(value) {
+  const labels = {
+    dashboard: "Dashboard",
+    pipeline: "Pipeline",
+    prospects: "Prospects",
+    playbook: "Playbook",
+    settings: "Data",
+  };
+  return labels[value] || titleCase(value);
 }
 
 function normalizeUrl(value) {
