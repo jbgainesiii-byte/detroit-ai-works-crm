@@ -222,6 +222,7 @@ const supabaseAnonKey =
 let prospects = loadLocalProspects();
 let activeView = "dashboard";
 let activeStageFilter = "All";
+let activeProspectId = "";
 
 const elements = {
   navTabs: document.querySelectorAll(".nav-tab"),
@@ -231,6 +232,7 @@ const elements = {
     dashboard: document.querySelector("#dashboardView"),
     pipeline: document.querySelector("#pipelineView"),
     prospects: document.querySelector("#prospectsView"),
+    account: document.querySelector("#accountView"),
     playbook: document.querySelector("#playbookView"),
     settings: document.querySelector("#settingsView"),
   },
@@ -245,6 +247,7 @@ const elements = {
   hotList: document.querySelector("#hotList"),
   showDueButton: document.querySelector("#showDueButton"),
   pipelineBoard: document.querySelector("#pipelineBoard"),
+  accountWorkspace: document.querySelector("#accountWorkspace"),
   stageFilters: document.querySelector("#stageFilters"),
   sortSelect: document.querySelector("#sortSelect"),
   prospectRows: document.querySelector("#prospectRows"),
@@ -350,6 +353,7 @@ function render() {
   renderSalesCharts();
   renderPipeline();
   renderProspectTable();
+  renderAccountWorkspace();
   renderNextAction();
 }
 
@@ -515,7 +519,7 @@ function renderList(items, emptyMessage) {
           </div>
           <p class="item-meta">${escapeHtml(item.niche || "Uncategorized")} · ${escapeHtml(item.city || "No city")} · ${formatDate(item.followUp)}</p>
           <p>${escapeHtml(item.issue || "No issue recorded.")}</p>
-          <button class="text-button" data-edit="${item.id}" type="button">Open record</button>
+          <button class="text-button" data-account="${item.id}" type="button">Open workspace</button>
         </article>
       `
     )
@@ -561,7 +565,7 @@ function renderPipelineCard(item) {
         ${renderBackButton(item)}
         ${renderAdvanceButton(item)}
         <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Mark Lost</button>
-        <button class="text-button" data-edit="${item.id}" type="button">Open record</button>
+        <button class="text-button" data-account="${item.id}" type="button">Open workspace</button>
       </div>
     </article>
   `;
@@ -625,6 +629,7 @@ function renderProspectTable() {
               ${renderBackButton(item)}
               ${renderAdvanceButton(item)}
               <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Lost</button>
+              <button class="mini-button" data-account="${item.id}" type="button">Open</button>
               <button class="text-button" data-edit="${item.id}" type="button">Edit</button>
             </div>
           </td>
@@ -632,6 +637,218 @@ function renderProspectTable() {
       `
     )
     .join("");
+}
+
+function renderAccountWorkspace() {
+  if (!elements.accountWorkspace) return;
+
+  const item = prospects.find((prospect) => prospect.id === activeProspectId);
+  if (!item) {
+    elements.accountWorkspace.innerHTML = `
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Account Workspace</p>
+            <h3>No prospect selected</h3>
+          </div>
+          <button class="secondary-button" data-view-jump="prospects" type="button">Back to prospects</button>
+        </div>
+        <p class="muted">Open a prospect from the Pipeline or Prospects tab to see the full workspace.</p>
+      </section>
+    `;
+    return;
+  }
+
+  const outreachEmail = buildOutreachEmail(item);
+  const callScript = buildCallScript(item);
+  const aiPrompt = buildResearchPrompt(item);
+
+  elements.accountWorkspace.innerHTML = `
+    <section class="account-hero">
+      <div>
+        <button class="text-button back-link" data-view-jump="prospects" type="button">Back to prospects</button>
+        <p class="eyebrow">Account Workspace</p>
+        <h3>${escapeHtml(item.businessName)}</h3>
+        <p>${escapeHtml(item.niche || "No niche")} · ${escapeHtml(item.city || "No city")}</p>
+      </div>
+      <div class="account-hero-actions">
+        <span class="badge good">${escapeHtml(item.stage)}</span>
+        <span class="badge ${item.score >= 80 ? "hot" : ""}">Score ${Number(item.score || 0)}</span>
+        ${renderBackButton(item)}
+        ${renderAdvanceButton(item)}
+        <button class="secondary-button" data-edit="${item.id}" type="button">Edit record</button>
+      </div>
+    </section>
+
+    <section class="account-grid">
+      <article class="panel account-main">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Business Intel</p>
+            <h3>What To Know Before Outreach</h3>
+          </div>
+        </div>
+        <div class="intel-grid">
+          ${renderIntelCard("Website issue", item.issue || "Add the main website problem after research.")}
+          ${renderIntelCard("Current offer angle", getOfferAngle(item))}
+          ${renderIntelCard("Next step", item.nextStep || stageAdvancement[item.stage]?.nextStep || "Choose the next step.")}
+          ${renderIntelCard("Notes", item.notes || "Add research notes, owner details, review findings, and conversation context here.")}
+        </div>
+      </article>
+
+      <aside class="panel account-side">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Contact</p>
+            <h3>Reach Info</h3>
+          </div>
+        </div>
+        <div class="contact-list">
+          ${renderContactLine("Contact", item.contactName || "Unknown")}
+          ${renderContactLine("Email", item.email || "No email")}
+          ${renderContactLine("Phone", item.phone || "No phone")}
+          ${renderContactLine("Follow-up", formatDate(item.followUp))}
+          ${renderContactLine("Last touched", formatDate(item.lastContacted))}
+          ${renderContactLink("Website", item.website)}
+          ${renderContactLink("Demo", item.demoUrl)}
+        </div>
+      </aside>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Outreach</p>
+            <h3>First Email</h3>
+          </div>
+          <button class="secondary-button copy-button" data-copy="${escapeAttr(outreachEmail)}" type="button">Copy email</button>
+        </div>
+        <pre class="workspace-copy">${escapeHtml(outreachEmail)}</pre>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Phone</p>
+            <h3>Call Opener</h3>
+          </div>
+          <button class="secondary-button copy-button" data-copy="${escapeAttr(callScript)}" type="button">Copy script</button>
+        </div>
+        <pre class="workspace-copy">${escapeHtml(callScript)}</pre>
+      </article>
+
+      <article class="panel full-span">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">AI Prep</p>
+            <h3>Research + Demo Brief</h3>
+          </div>
+          <button class="secondary-button copy-button" data-copy="${escapeAttr(aiPrompt)}" type="button">Copy AI prompt</button>
+        </div>
+        <pre class="workspace-copy">${escapeHtml(aiPrompt)}</pre>
+      </article>
+    </section>
+  `;
+}
+
+function renderIntelCard(label, value) {
+  return `
+    <div class="intel-card">
+      <span>${escapeHtml(label)}</span>
+      <p>${escapeHtml(value)}</p>
+    </div>
+  `;
+}
+
+function renderContactLine(label, value) {
+  return `
+    <div class="contact-line">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value || "Unknown")}</strong>
+    </div>
+  `;
+}
+
+function renderContactLink(label, url) {
+  return `
+    <div class="contact-line">
+      <span>${escapeHtml(label)}</span>
+      ${
+        url
+          ? `<a href="${escapeAttr(url)}" target="_blank" rel="noreferrer">${escapeHtml(url.replace(/^https?:\/\//i, ""))}</a>`
+          : `<strong>Not added</strong>`
+      }
+    </div>
+  `;
+}
+
+function getOfferAngle(item) {
+  if (/review|trust/i.test(item.notes || item.issue || "")) return "Lead with trust, reviews, and proof.";
+  if (/template|unfinished|outdated/i.test(item.notes || item.issue || "")) return "Lead with a cleaner local growth website demo.";
+  if (/mobile|call|contact|quote|booking/i.test(item.issue || "")) return "Lead with mobile conversion and quote request flow.";
+  return "Lead with a local growth system, not just a website redesign.";
+}
+
+function buildOutreachEmail(item) {
+  const contact = item.contactName || "there";
+  const business = item.businessName || "your business";
+  const niche = item.niche || "local service";
+  const city = item.city || "your area";
+  const issue = item.issue || "the website could make it easier for customers to understand the services and request an estimate";
+  const demoLine = item.demoUrl
+    ? `\n\nI put together a quick cleaner concept here:\n${item.demoUrl}`
+    : "\n\nI had a few ideas for a cleaner, more conversion-focused version if you are open to taking a look.";
+
+  return `Subject: Quick website idea for ${business}
+
+Hi ${contact},
+
+I came across ${business} while looking at ${niche} businesses around ${city}. You look like a real local operator, and I noticed one thing that may be costing trust with homeowners:
+
+${issue}.${demoLine}
+
+The idea is not just a prettier website. It is making the services, proof, and estimate request easier to trust and act on from a phone.
+
+Worth a quick look?`;
+}
+
+function buildCallScript(item) {
+  const business = item.businessName || "the business";
+  const issue = item.issue || "making the website easier for customers to use from their phone";
+  return `Hey, this is Javon with Detroit AI Works. I am not sure if you are the right person, but we sent over a quick idea for ${business}.
+
+It was mostly around ${issue}
+
+Who would be the best person to send that to?`;
+}
+
+function buildResearchPrompt(item) {
+  return `Research ${item.businessName} and prepare a custom demo/outreach brief for Detroit AI Works.
+
+Business:
+- Name: ${item.businessName}
+- Niche: ${item.niche || "Unknown"}
+- City: ${item.city || "Unknown"}
+- Website: ${item.website || "Unknown"}
+- Current issue: ${item.issue || "Unknown"}
+- Notes: ${item.notes || "None yet"}
+
+Find:
+- Core services
+- Service areas
+- Google review count and strongest trust signals
+- Photos, projects, before/after proof, or missing proof
+- Website conversion problems
+- Mobile/contact/quote flow problems
+- 2 nearby competitors with stronger digital presence
+- Best sales angle for a local growth system
+
+Return:
+- 5 bullet business brief
+- demo homepage section plan
+- recommended offer
+- first outreach email
+- follow-up email
+- call opener for Javon`;
 }
 
 function renderNextAction() {
@@ -656,6 +873,18 @@ function renderNextAction() {
 }
 
 document.addEventListener("click", (event) => {
+  const viewJump = event.target.closest("[data-view-jump]");
+  if (viewJump) {
+    switchView(viewJump.dataset.viewJump);
+    return;
+  }
+
+  const accountButton = event.target.closest("[data-account]");
+  if (accountButton) {
+    openAccountWorkspace(accountButton.dataset.account);
+    return;
+  }
+
   const backButton = event.target.closest("[data-back]");
   if (backButton) {
     moveProspectBack(backButton.dataset.back);
@@ -686,6 +915,13 @@ document.addEventListener("click", (event) => {
     copyToClipboard(copyButton.dataset.copy, copyButton);
   }
 });
+
+function openAccountWorkspace(id) {
+  const item = prospects.find((prospect) => prospect.id === id);
+  if (!item) return;
+  activeProspectId = id;
+  switchView("account");
+}
 
 function openProspectDialog(id = "") {
   elements.form.reset();
@@ -1231,6 +1467,7 @@ function getViewLabel(value) {
     dashboard: "Dashboard",
     pipeline: "Pipeline",
     prospects: "Prospects",
+    account: "Account",
     playbook: "Playbook",
     settings: "Data",
   };

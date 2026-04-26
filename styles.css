@@ -624,6 +624,131 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.account-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.account-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 20px;
+  background: #102f3a;
+  color: #ffffff;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.account-hero h3 {
+  margin-top: 4px;
+  font-size: 1.55rem;
+}
+
+.account-hero p:not(.eyebrow) {
+  color: rgba(255, 255, 255, 0.76);
+  margin-top: 4px;
+}
+
+.account-hero .back-link {
+  color: #f6c453;
+  min-height: auto;
+  padding: 0 0 10px;
+}
+
+.account-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.account-main {
+  min-height: 100%;
+}
+
+.account-side {
+  min-height: 100%;
+}
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.intel-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.intel-card span,
+.contact-line span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.intel-card p {
+  line-height: 1.5;
+}
+
+.contact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.contact-line {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+}
+
+.contact-line:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.contact-line strong,
+.contact-line a {
+  color: var(--ink);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.contact-line a {
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.workspace-copy {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--ink);
+  line-height: 1.55;
+  font-family: inherit;
+  font-size: 0.94rem;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+
 .card-actions,
 .row-actions {
   display: flex;
@@ -847,10 +972,20 @@ label {
   .metric-grid,
   .two-column,
   .sales-dashboard,
+  .account-grid,
+  .intel-grid,
   .settings-grid,
   .playbook-layout,
   .stage-guide {
     grid-template-columns: 1fr;
+  }
+
+  .account-hero {
+    flex-direction: column;
+  }
+
+  .account-hero-actions {
+    justify-content: flex-start;
   }
 
   .hero-band {
