@@ -1465,61 +1465,58 @@ function importJson(event) {
 }
 
 function normalizeImportedProspect(item) {
-  const website = normalizeUrl(item.website || item.currentWebsite || "");
+  const website = normalizeUrl(readImportField(item, ["website", "currentWebsite", "current website", "url", "site"]));
   const researchNotes = buildImportedResearchNotes(item);
-  const reviewCount = Number(item.reviewCount || item.reviews || 0);
+  const reviewCount = Number(readImportField(item, ["reviewCount", "review count", "reviews", "google reviews"]) || 0);
   const issue =
-    item.issue ||
-    item.websiteIssue ||
-    item.problem ||
+    readImportField(item, ["issue", "websiteIssue", "website issue", "problem", "conversionGaps", "conversion gaps"]) ||
     (!website && reviewCount >= 20
       ? "No owned website found despite having enough reviews to justify a simple credibility and quote-request site."
       : "");
+  const stage = readImportField(item, ["stage", "status"]);
 
   return {
-    id: item.id || crypto.randomUUID(),
-    businessName: item.businessName || item.business || item.name || "Untitled Business",
-    niche: item.niche || item.industry || "",
-    city: item.city || item.market || item.location || "",
-    contactName: item.contactName || item.contact || item.owner || "",
-    email: item.email || "",
-    phone: item.phone || "",
+    id: readImportField(item, ["id"]) || crypto.randomUUID(),
+    businessName: readImportField(item, ["businessName", "business name", "business", "company", "name"]) || "Untitled Business",
+    niche: readImportField(item, ["niche", "industry", "category"]),
+    city: readImportField(item, ["city", "market", "location", "serviceArea", "service area"]),
+    contactName: readImportField(item, ["contactName", "contact name", "contact", "owner", "owner name"]),
+    email: readImportField(item, ["email", "email address"]),
+    phone: readImportField(item, ["phone", "phone number", "telephone"]),
     website,
-    demoUrl: normalizeUrl(item.demoUrl || item.demo || ""),
-    stage: stages.includes(item.stage) ? item.stage : "Found",
-    followUp: item.followUp || item.followUpDate || "",
-    score: Number(item.score || item.fitScore || 0),
-    quote: item.quote || item.package || item.recommendedOffer || "",
-    assignedTo: item.assignedTo || item.owner || item.rep || "",
+    demoUrl: normalizeUrl(readImportField(item, ["demoUrl", "demo url", "demo"])),
+    stage: stages.includes(stage) ? stage : "Found",
+    followUp: readImportField(item, ["followUp", "follow up", "followUpDate", "follow up date"]),
+    score: Number(readImportField(item, ["score", "fitScore", "fit score", "lead score"]) || 0),
+    quote: readImportField(item, ["quote", "package", "recommendedOffer", "recommended offer", "offer"]),
+    assignedTo: readImportField(item, ["assignedTo", "assigned to", "rep", "owner", "sales owner"]),
     nextStep:
-      item.nextStep ||
-      item.nextAction ||
-      item.task ||
+      readImportField(item, ["nextStep", "next step", "nextAction", "next action", "task"]) ||
       (!website && reviewCount >= 20 ? "Send no-website credibility-site angle." : ""),
-    lastContacted: item.lastContacted || item.lastTouch || item.lastContact || "",
+    lastContacted: readImportField(item, ["lastContacted", "last contacted", "lastTouch", "last touch", "lastContact"]),
     issue,
-    notes: [item.notes || "", researchNotes].filter(Boolean).join("\n\n"),
-    updatedAt: item.updatedAt || new Date().toISOString(),
+    notes: [readImportField(item, ["notes", "research notes", "summary notes"]) || "", researchNotes].filter(Boolean).join("\n\n"),
+    updatedAt: readImportField(item, ["updatedAt", "updated at"]) || new Date().toISOString(),
   };
 }
 
 function buildImportedResearchNotes(item) {
   const mappings = [
-    ["leadType", item.leadType || item.websiteStatus],
-    ["businessSummary", item.businessSummary || item.summary],
-    ["services", item.services || item.coreServices],
-    ["serviceArea", item.serviceArea || item.serviceAreas],
-    ["reviewRating", item.reviewRating || item.rating],
-    ["reviewCount", item.reviewCount || item.reviews],
-    ["reviewHighlights", item.reviewHighlights || item.reviewThemes],
-    ["monthlyVisitors", item.monthlyVisitors || item.traffic || item.visits],
-    ["trafficTrend", item.trafficTrend],
-    ["trafficSources", item.trafficSources || item.channels],
-    ["trustSignals", item.trustSignals || item.proof],
-    ["conversionGaps", item.conversionGaps || item.websiteGaps],
-    ["competitors", item.competitors || item.competitorNotes],
-    ["recommendedOffer", item.recommendedOffer || item.offer],
-    ["offerAngle", item.offerAngle || item.salesAngle],
+    ["leadType", readImportField(item, ["leadType", "lead type", "websiteStatus", "website status"])],
+    ["businessSummary", readImportField(item, ["businessSummary", "business summary", "summary"])],
+    ["services", readImportField(item, ["services", "coreServices", "core services"])],
+    ["serviceArea", readImportField(item, ["serviceArea", "service area", "serviceAreas", "service areas"])],
+    ["reviewRating", readImportField(item, ["reviewRating", "review rating", "rating", "google rating"])],
+    ["reviewCount", readImportField(item, ["reviewCount", "review count", "reviews", "google reviews"])],
+    ["reviewHighlights", readImportField(item, ["reviewHighlights", "review highlights", "reviewThemes", "review themes"])],
+    ["monthlyVisitors", readImportField(item, ["monthlyVisitors", "monthly visitors", "traffic", "visits"])],
+    ["trafficTrend", readImportField(item, ["trafficTrend", "traffic trend"])],
+    ["trafficSources", readImportField(item, ["trafficSources", "traffic sources", "channels"])],
+    ["trustSignals", readImportField(item, ["trustSignals", "trust signals", "proof"])],
+    ["conversionGaps", readImportField(item, ["conversionGaps", "conversion gaps", "websiteGaps", "website gaps"])],
+    ["competitors", readImportField(item, ["competitors", "competitorNotes", "competitor notes"])],
+    ["recommendedOffer", readImportField(item, ["recommendedOffer", "recommended offer", "offer"])],
+    ["offerAngle", readImportField(item, ["offerAngle", "offer angle", "salesAngle", "sales angle"])],
   ];
 
   const lines = mappings
@@ -1527,6 +1524,26 @@ function buildImportedResearchNotes(item) {
     .map(([label, value]) => `${label}: ${String(value).trim()}`);
 
   return lines.length ? `MANUS RESEARCH\n${lines.join("\n")}` : "";
+}
+
+function readImportField(item, names) {
+  const normalizedMap = Object.entries(item).reduce((acc, [key, value]) => {
+    acc[normalizeHeaderKey(key)] = value;
+    return acc;
+  }, {});
+
+  for (const name of names) {
+    const direct = item[name];
+    if (String(direct || "").trim()) return String(direct).trim();
+    const normalized = normalizedMap[normalizeHeaderKey(name)];
+    if (String(normalized || "").trim()) return String(normalized).trim();
+  }
+
+  return "";
+}
+
+function normalizeHeaderKey(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function parseCsv(text) {
