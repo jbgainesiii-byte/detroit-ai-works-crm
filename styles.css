@@ -242,7 +242,7 @@ textarea:focus {
 
 .primary-button,
 .secondary-button,
-danger-button,
+.danger-button,
 .text-button,
 .file-picker {
   border-radius: 8px;
@@ -362,7 +362,7 @@ danger-button,
 .list-item,
 .pipeline-card,
 .playbook-card,
-prompt-card,
+.prompt-card,
 .package-card {
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
@@ -476,7 +476,7 @@ prompt-card,
 .list-item,
 .pipeline-card,
 .playbook-card,
-prompt-card,
+.prompt-card,
 .package-card {
   border: 1px solid var(--line);
   border-radius: 8px;
