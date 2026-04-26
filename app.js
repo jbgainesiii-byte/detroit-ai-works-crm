@@ -38,6 +38,18 @@ const stageAdvancement = {
   Won: { stage: "Launched", label: "Mark Launched", days: 0, nextStep: "Offer care plan and ask for referral." },
 };
 
+const stageBackMap = {
+  Qualified: "Found",
+  "Demo Built": "Qualified",
+  "First Email Sent": "Demo Built",
+  "Follow-Up 1": "First Email Sent",
+  "Follow-Up 2": "Follow-Up 1",
+  Interested: "Follow-Up 2",
+  "Proposal Sent": "Interested",
+  Won: "Proposal Sent",
+  Launched: "Won",
+};
+
 const starterProspects = [
   {
     id: crypto.randomUUID(),
@@ -226,6 +238,9 @@ const elements = {
   addProspectButton: document.querySelector("#addProspectButton"),
   exportButton: document.querySelector("#exportButton"),
   metricGrid: document.querySelector("#metricGrid"),
+  stageChart: document.querySelector("#stageChart"),
+  packageChart: document.querySelector("#packageChart"),
+  ownerChart: document.querySelector("#ownerChart"),
   dueList: document.querySelector("#dueList"),
   hotList: document.querySelector("#hotList"),
   showDueButton: document.querySelector("#showDueButton"),
@@ -332,6 +347,7 @@ function switchView(viewName) {
 
 function render() {
   renderDashboard();
+  renderSalesCharts();
   renderPipeline();
   renderProspectTable();
   renderNextAction();
@@ -391,13 +407,16 @@ function renderDashboard() {
   const interestedCount = prospects.filter((item) => item.stage === "Interested").length;
   const wonCount = prospects.filter((item) => item.stage === "Won" || item.stage === "Launched").length;
   const demoCount = prospects.filter((item) => item.demoUrl).length;
+  const activeCount = prospects.filter((item) => !["Won", "Lost", "Launched"].includes(item.stage)).length;
+  const closeRate = prospects.length ? Math.round((wonCount / prospects.length) * 100) : 0;
 
   const metrics = [
     ["Total Prospects", prospects.length],
+    ["Active Deals", activeCount],
     ["Demos Built", demoCount],
     ["Follow-ups Due", due.length],
     ["Won / Launched", wonCount],
-    ["Interested", interestedCount],
+    ["Close Rate", `${closeRate}%`],
   ];
 
   elements.metricGrid.innerHTML = metrics
@@ -410,6 +429,75 @@ function renderDashboard() {
     .filter((item) => ["Interested", "Proposal Sent", "Won"].includes(item.stage))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   elements.hotList.innerHTML = renderList(hot.slice(0, 6), "No hot leads yet.");
+}
+
+function renderSalesCharts() {
+  const activeStages = stages.filter((stage) => !["Lost", "Launched"].includes(stage));
+  elements.stageChart.innerHTML = renderBarChart(
+    activeStages.map((stage) => ({
+      label: stage,
+      value: prospects.filter((item) => item.stage === stage).length,
+    })),
+    "No pipeline data yet."
+  );
+
+  elements.packageChart.innerHTML = renderBarChart(
+    groupCounts(
+      prospects.map((item) => getPackageLabel(item.quote)).filter(Boolean),
+      "No package"
+    ),
+    "No package data yet."
+  );
+
+  elements.ownerChart.innerHTML = renderBarChart(
+    groupCounts(
+      prospects.map((item) => item.assignedTo || "Unassigned"),
+      "Unassigned"
+    ),
+    "No owner data yet."
+  );
+}
+
+function renderBarChart(items, emptyMessage) {
+  const visible = items.filter((item) => item.value > 0);
+  if (!visible.length) return `<div class="empty-state compact-empty">${emptyMessage}</div>`;
+
+  const maxValue = Math.max(...visible.map((item) => item.value), 1);
+  return visible
+    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label))
+    .slice(0, 7)
+    .map(
+      (item) => `
+        <div class="chart-row">
+          <div class="chart-label">
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${item.value}</strong>
+          </div>
+          <div class="bar-track" aria-hidden="true">
+            <span style="width: ${Math.max(8, Math.round((item.value / maxValue) * 100))}%"></span>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function groupCounts(values, fallbackLabel) {
+  const counts = values.reduce((acc, value) => {
+    const label = value || fallbackLabel;
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+  return Object.entries(counts).map(([label, value]) => ({ label, value }));
+}
+
+function getPackageLabel(quote) {
+  if (!quote) return "";
+  if (/starter/i.test(quote)) return "Starter Refresh";
+  if (/booking/i.test(quote)) return "Website + Booking";
+  if (/care/i.test(quote)) return "Care Plan";
+  if (/local|business|site/i.test(quote)) return "Local Business Site";
+  return quote;
 }
 
 function renderList(items, emptyMessage) {
@@ -470,12 +558,19 @@ function renderPipelineCard(item) {
       <p class="item-meta">Owner: ${escapeHtml(item.assignedTo || "Unassigned")} · Follow-up: ${formatDate(item.followUp)}</p>
       <p class="item-meta">Next: ${escapeHtml(item.nextStep || stageAdvancement[item.stage]?.nextStep || "Open record and choose the next step.")}</p>
       <div class="card-actions">
+        ${renderBackButton(item)}
         ${renderAdvanceButton(item)}
         <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Mark Lost</button>
         <button class="text-button" data-edit="${item.id}" type="button">Open record</button>
       </div>
     </article>
   `;
+}
+
+function renderBackButton(item) {
+  const previous = stageBackMap[item.stage];
+  if (!previous || item.stage === "Lost") return "";
+  return `<button class="mini-button" data-back="${item.id}" type="button">Back to ${escapeHtml(previous)}</button>`;
 }
 
 function renderAdvanceButton(item) {
@@ -527,6 +622,7 @@ function renderProspectTable() {
           <td>${item.demoUrl ? `<a href="${escapeAttr(item.demoUrl)}" target="_blank" rel="noreferrer">Open demo</a>` : `<span class="item-meta">No demo</span>`}</td>
           <td>
             <div class="row-actions">
+              ${renderBackButton(item)}
               ${renderAdvanceButton(item)}
               <button class="mini-button danger-mini" data-stage="${item.id}|Lost" type="button">Lost</button>
               <button class="text-button" data-edit="${item.id}" type="button">Edit</button>
@@ -560,6 +656,12 @@ function renderNextAction() {
 }
 
 document.addEventListener("click", (event) => {
+  const backButton = event.target.closest("[data-back]");
+  if (backButton) {
+    moveProspectBack(backButton.dataset.back);
+    return;
+  }
+
   const advanceButton = event.target.closest("[data-advance]");
   if (advanceButton) {
     advanceProspectStage(advanceButton.dataset.advance);
@@ -683,6 +785,17 @@ async function deleteCurrentProspect() {
   prospects = prospects.filter((prospect) => prospect.id !== id);
   persist();
   render();
+}
+
+async function moveProspectBack(id) {
+  const item = prospects.find((prospect) => prospect.id === id);
+  const previousStage = item ? stageBackMap[item.stage] : null;
+  if (!item || !previousStage) return;
+
+  await setProspectStage(id, previousStage, {
+    followUp: item.followUp || todayPlus(1),
+    nextStep: stageAdvancement[previousStage]?.nextStep || item.nextStep || "",
+  });
 }
 
 async function advanceProspectStage(id) {
