@@ -9,6 +9,8 @@ A lightweight outreach CRM for tracking small business website redesign prospect
 - Moves leads forward with quick stage buttons, owner fields, next steps, and last-contact dates
 - Imports and exports CSV files for Google Sheets workflows
 - Includes outreach scripts, follow-ups, rebuttals, discovery prompts, and package anchors
+- Turns richer Manus research into a 360 account workspace with offer angle, reviews, traffic, competitors, and conversion gaps
+- Highlights a separate no-website play for businesses with strong reviews but no owned website
 
 ## Deploy on Netlify
 
@@ -61,4 +63,10 @@ Use these columns when importing leads from Google Sheets:
 
 ```csv
 businessName,niche,city,contactName,email,phone,website,demoUrl,stage,followUp,score,quote,assignedTo,nextStep,lastContacted,issue,notes
+```
+
+For Manus research, the CRM also understands these optional columns and stores them inside the account workspace:
+
+```csv
+businessSummary,services,serviceArea,reviewRating,reviewCount,reviewHighlights,monthlyVisitors,trafficTrend,trafficSources,trustSignals,conversionGaps,competitors,recommendedOffer,offerAngle,leadType
 ```

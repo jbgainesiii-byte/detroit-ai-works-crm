@@ -685,6 +685,12 @@ textarea:focus {
   gap: 12px;
 }
 
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .intel-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -695,6 +701,7 @@ textarea:focus {
 }
 
 .intel-card span,
+.brief-block span,
 .contact-line span {
   color: var(--muted);
   font-size: 0.78rem;
@@ -705,6 +712,20 @@ textarea:focus {
 
 .intel-card p {
   line-height: 1.5;
+}
+
+.brief-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+}
+
+.brief-block p {
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .contact-list {
@@ -974,6 +995,7 @@ label {
   .sales-dashboard,
   .account-grid,
   .intel-grid,
+  .brief-grid,
   .settings-grid,
   .playbook-layout,
   .stage-guide {

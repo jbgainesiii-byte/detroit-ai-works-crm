@@ -245,6 +245,7 @@ const elements = {
   ownerChart: document.querySelector("#ownerChart"),
   dueList: document.querySelector("#dueList"),
   hotList: document.querySelector("#hotList"),
+  noWebsiteList: document.querySelector("#noWebsiteList"),
   showDueButton: document.querySelector("#showDueButton"),
   pipelineBoard: document.querySelector("#pipelineBoard"),
   accountWorkspace: document.querySelector("#accountWorkspace"),
@@ -433,6 +434,14 @@ function renderDashboard() {
     .filter((item) => ["Interested", "Proposal Sent", "Won"].includes(item.stage))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   elements.hotList.innerHTML = renderList(hot.slice(0, 6), "No hot leads yet.");
+
+  const noWebsiteLeads = prospects
+    .filter((item) => isNoWebsiteLead(item))
+    .sort((a, b) => Number(getResearchValue(b, "reviewCount") || 0) - Number(getResearchValue(a, "reviewCount") || 0));
+  elements.noWebsiteList.innerHTML = renderList(
+    noWebsiteLeads.slice(0, 6),
+    "No no-website leads yet. Manus can find businesses with strong Google reviews and no owned site."
+  );
 }
 
 function renderSalesCharts() {
@@ -662,6 +671,7 @@ function renderAccountWorkspace() {
   const outreachEmail = buildOutreachEmail(item);
   const callScript = buildCallScript(item);
   const aiPrompt = buildResearchPrompt(item);
+  const dossier = buildBusinessDossier(item);
 
   elements.accountWorkspace.innerHTML = `
     <section class="account-hero">
@@ -689,10 +699,12 @@ function renderAccountWorkspace() {
           </div>
         </div>
         <div class="intel-grid">
-          ${renderIntelCard("Website issue", item.issue || "Add the main website problem after research.")}
-          ${renderIntelCard("Current offer angle", getOfferAngle(item))}
+          ${renderIntelCard("Lead type", dossier.leadType)}
+          ${renderIntelCard("Website issue", item.issue || dossier.websiteIssue)}
+          ${renderIntelCard("Review signal", dossier.reviewSignal)}
+          ${renderIntelCard("Traffic signal", dossier.trafficSignal)}
           ${renderIntelCard("Next step", item.nextStep || stageAdvancement[item.stage]?.nextStep || "Choose the next step.")}
-          ${renderIntelCard("Notes", item.notes || "Add research notes, owner details, review findings, and conversation context here.")}
+          ${renderIntelCard("Recommended offer", dossier.recommendedOffer)}
         </div>
       </article>
 
@@ -713,6 +725,25 @@ function renderAccountWorkspace() {
           ${renderContactLink("Demo", item.demoUrl)}
         </div>
       </aside>
+
+      <article class="panel full-span">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">360 Brief</p>
+            <h3>Business Research</h3>
+          </div>
+        </div>
+        <div class="brief-grid">
+          ${renderBriefBlock("Business snapshot", dossier.summary)}
+          ${renderBriefBlock("Core services", dossier.services)}
+          ${renderBriefBlock("Service area", dossier.serviceArea)}
+          ${renderBriefBlock("Trust signals", dossier.trustSignals)}
+          ${renderBriefBlock("Conversion gaps", dossier.conversionGaps)}
+          ${renderBriefBlock("Competitor notes", dossier.competitors)}
+          ${renderBriefBlock("Offer angle", dossier.offerAngle)}
+          ${renderBriefBlock("Notes", item.notes || "Add Manus research, call notes, objections, and business context here.")}
+        </div>
+      </article>
 
       <article class="panel">
         <div class="panel-heading">
@@ -759,6 +790,15 @@ function renderIntelCard(label, value) {
   `;
 }
 
+function renderBriefBlock(label, value) {
+  return `
+    <div class="brief-block">
+      <span>${escapeHtml(label)}</span>
+      <p>${escapeHtml(value || "Not researched yet.")}</p>
+    </div>
+  `;
+}
+
 function renderContactLine(label, value) {
   return `
     <div class="contact-line">
@@ -782,7 +822,10 @@ function renderContactLink(label, url) {
 }
 
 function getOfferAngle(item) {
+  const dossier = buildBusinessDossier(item);
+  if (dossier.recommendedOffer !== "Recommend a specific offer after research.") return dossier.recommendedOffer;
   if (/review|trust/i.test(item.notes || item.issue || "")) return "Lead with trust, reviews, and proof.";
+  if (isNoWebsiteLead(item)) return "Lead with a fast credibility site for a well-reviewed business that has no owned web presence.";
   if (/template|unfinished|outdated/i.test(item.notes || item.issue || "")) return "Lead with a cleaner local growth website demo.";
   if (/mobile|call|contact|quote|booking/i.test(item.issue || "")) return "Lead with mobile conversion and quote request flow.";
   return "Lead with a local growth system, not just a website redesign.";
@@ -793,10 +836,12 @@ function buildOutreachEmail(item) {
   const business = item.businessName || "your business";
   const niche = item.niche || "local service";
   const city = item.city || "your area";
-  const issue = item.issue || "the website could make it easier for customers to understand the services and request an estimate";
+  const dossier = buildBusinessDossier(item);
+  const issue = item.issue || dossier.websiteIssue;
   const demoLine = item.demoUrl
     ? `\n\nI put together a quick cleaner concept here:\n${item.demoUrl}`
     : "\n\nI had a few ideas for a cleaner, more conversion-focused version if you are open to taking a look.";
+  const proofLine = dossier.reviewSignal !== "No review data yet." ? `\n\nWhat stood out: ${dossier.reviewSignal}` : "";
 
   return `Subject: Quick website idea for ${business}
 
@@ -804,7 +849,7 @@ Hi ${contact},
 
 I came across ${business} while looking at ${niche} businesses around ${city}. You look like a real local operator, and I noticed one thing that may be costing trust with homeowners:
 
-${issue}.${demoLine}
+${issue}.${proofLine}${demoLine}
 
 The idea is not just a prettier website. It is making the services, proof, and estimate request easier to trust and act on from a phone.
 
@@ -822,7 +867,7 @@ Who would be the best person to send that to?`;
 }
 
 function buildResearchPrompt(item) {
-  return `Research ${item.businessName} and prepare a custom demo/outreach brief for Detroit AI Works.
+  return `Research ${item.businessName} and prepare a full prospect dossier, offer angle, and demo brief for Detroit AI Works.
 
 Business:
 - Name: ${item.businessName}
@@ -833,22 +878,115 @@ Business:
 - Notes: ${item.notes || "None yet"}
 
 Find:
-- Core services
-- Service areas
-- Google review count and strongest trust signals
-- Photos, projects, before/after proof, or missing proof
-- Website conversion problems
-- Mobile/contact/quote flow problems
-- 2 nearby competitors with stronger digital presence
-- Best sales angle for a local growth system
+- Whether they have no website, an outdated website, a weak website, or only social/media profiles
+- Core services, high-value services, and service areas
+- Google rating, review count, review themes, and strongest trust signals
+- Similarweb or traffic estimate if available: visits, traffic trend, top channels, top pages, and search keywords
+- Photos, projects, before/after proof, crew proof, certifications, guarantees, or missing proof
+- Website conversion problems: mobile clarity, click-to-call, quote form, service pages, reviews, gallery, speed, SEO basics
+- Social presence and whether social is stronger than the website
+- 2 nearby competitors with stronger digital presence and what they do better
+- If they have no website but good reviews, explain the credibility-site angle
+- Best Detroit AI Works offer: starter credibility site, local business growth site, booking/quote system, review engine, care plan, or custom AI tool
 
 Return:
-- 5 bullet business brief
-- demo homepage section plan
-- recommended offer
-- first outreach email
-- follow-up email
-- call opener for Javon`;
+- A CSV-ready row with these exact columns:
+businessName,niche,city,contactName,email,phone,website,stage,score,quote,nextStep,issue,businessSummary,services,serviceArea,reviewRating,reviewCount,reviewHighlights,monthlyVisitors,trafficTrend,trafficSources,trustSignals,conversionGaps,competitors,recommendedOffer,offerAngle,leadType,notes
+- Keep stage as Found unless the lead is already hand-qualified
+- Score 0-100 based on fit, urgency, reachable contact info, review strength, website weakness, and likely ability to pay
+- Issue should be one sharp sentence Javon can mention on a call
+- RecommendedOffer should be a sellable package, not vague advice
+- OfferAngle should explain the business reason, not just "needs a website"
+- Demo homepage section plan
+- First outreach email
+- Follow-up email
+- Call opener for Javon`;
+}
+
+function buildBusinessDossier(item) {
+  const leadType = getResearchValue(item, "leadType") || inferLeadType(item);
+  const reviewSignal = formatReviewSignal(item);
+  const trafficSignal = formatTrafficSignal(item);
+  const websiteIssue =
+    item.issue ||
+    (isNoWebsiteLead(item)
+      ? "No owned website found, so strong reviews and services may not be converting into an easy quote request path."
+      : "Add the main website problem after research.");
+
+  return {
+    leadType,
+    websiteIssue,
+    reviewSignal,
+    trafficSignal,
+    recommendedOffer: getResearchValue(item, "recommendedOffer") || item.quote || "Recommend a specific offer after research.",
+    summary: getResearchValue(item, "businessSummary") || "Add who they serve, what they sell, and why they look like a fit.",
+    services: getResearchValue(item, "services") || "Add core services and high-value services.",
+    serviceArea: getResearchValue(item, "serviceArea") || item.city || "Add cities or neighborhoods served.",
+    trustSignals: getResearchValue(item, "trustSignals") || getResearchValue(item, "reviewHighlights") || "Add reviews, proof, photos, guarantees, or credentials.",
+    conversionGaps: getResearchValue(item, "conversionGaps") || item.issue || "Add website, social, call, booking, or quote-request gaps.",
+    competitors: getResearchValue(item, "competitors") || "Add nearby competitors with stronger websites or better proof.",
+    offerAngle: getResearchValue(item, "offerAngle") || inferOfferAngle(item),
+  };
+}
+
+function inferLeadType(item) {
+  if (isNoWebsiteLead(item)) return "No website / strong local presence";
+  if (/social|facebook|instagram|only social/i.test(item.notes || "")) return "Social-only or social-first";
+  if (/old|outdated|dated|template|unfinished|mobile|slow|broken/i.test(`${item.issue} ${item.notes}`)) return "Weak or outdated website";
+  return "Website needs research";
+}
+
+function inferOfferAngle(item) {
+  if (isNoWebsiteLead(item)) {
+    return "They already have market proof, so the offer is turning reviews into an owned credibility and quote engine.";
+  }
+  if (/review|trust|proof/i.test(`${item.issue} ${item.notes}`)) {
+    return "Lead with proof, reviews, and trust signals that make a customer comfortable requesting a quote.";
+  }
+  if (/traffic|visitor|search|seo/i.test(item.notes || "")) {
+    return "Lead with capturing existing demand from search and turning visitors into calls.";
+  }
+  return "Lead with a local growth system that makes the business easier to trust, understand, and contact.";
+}
+
+function formatReviewSignal(item) {
+  const rating = getResearchValue(item, "reviewRating");
+  const count = getResearchValue(item, "reviewCount");
+  const highlights = getResearchValue(item, "reviewHighlights");
+  if (rating || count || highlights) {
+    return [rating ? `${rating} rating` : "", count ? `${count} reviews` : "", highlights].filter(Boolean).join(" · ");
+  }
+  return "No review data yet.";
+}
+
+function formatTrafficSignal(item) {
+  const visits = getResearchValue(item, "monthlyVisitors");
+  const trend = getResearchValue(item, "trafficTrend");
+  const sources = getResearchValue(item, "trafficSources");
+  if (visits || trend || sources) {
+    return [visits ? `${visits} monthly visits` : "", trend ? `Trend: ${trend}` : "", sources ? `Sources: ${sources}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return "No traffic data yet.";
+}
+
+function isNoWebsiteLead(item) {
+  return !item.website || /no website|none found|social only|facebook only|instagram only/i.test(`${item.issue} ${item.notes}`);
+}
+
+function getResearchValue(item, key) {
+  if (item[key]) return String(item[key]).trim();
+  const label = key.replace(/([A-Z])/g, " $1").trim();
+  const patterns = [
+    new RegExp(`(?:^|\\n)${escapeRegex(key)}\\s*:\\s*([^\\n]+)`, "i"),
+    new RegExp(`(?:^|\\n)${escapeRegex(label)}\\s*:\\s*([^\\n]+)`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = String(item.notes || "").match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+  return "";
 }
 
 function renderNextAction() {
@@ -1327,6 +1465,17 @@ function importJson(event) {
 }
 
 function normalizeImportedProspect(item) {
+  const website = normalizeUrl(item.website || item.currentWebsite || "");
+  const researchNotes = buildImportedResearchNotes(item);
+  const reviewCount = Number(item.reviewCount || item.reviews || 0);
+  const issue =
+    item.issue ||
+    item.websiteIssue ||
+    item.problem ||
+    (!website && reviewCount >= 20
+      ? "No owned website found despite having enough reviews to justify a simple credibility and quote-request site."
+      : "");
+
   return {
     id: item.id || crypto.randomUUID(),
     businessName: item.businessName || item.business || item.name || "Untitled Business",
@@ -1335,19 +1484,49 @@ function normalizeImportedProspect(item) {
     contactName: item.contactName || item.contact || item.owner || "",
     email: item.email || "",
     phone: item.phone || "",
-    website: normalizeUrl(item.website || item.currentWebsite || ""),
+    website,
     demoUrl: normalizeUrl(item.demoUrl || item.demo || ""),
     stage: stages.includes(item.stage) ? item.stage : "Found",
     followUp: item.followUp || item.followUpDate || "",
     score: Number(item.score || item.fitScore || 0),
-    quote: item.quote || item.package || "",
+    quote: item.quote || item.package || item.recommendedOffer || "",
     assignedTo: item.assignedTo || item.owner || item.rep || "",
-    nextStep: item.nextStep || item.nextAction || item.task || "",
+    nextStep:
+      item.nextStep ||
+      item.nextAction ||
+      item.task ||
+      (!website && reviewCount >= 20 ? "Send no-website credibility-site angle." : ""),
     lastContacted: item.lastContacted || item.lastTouch || item.lastContact || "",
-    issue: item.issue || item.websiteIssue || item.problem || "",
-    notes: item.notes || "",
+    issue,
+    notes: [item.notes || "", researchNotes].filter(Boolean).join("\n\n"),
     updatedAt: item.updatedAt || new Date().toISOString(),
   };
+}
+
+function buildImportedResearchNotes(item) {
+  const mappings = [
+    ["leadType", item.leadType || item.websiteStatus],
+    ["businessSummary", item.businessSummary || item.summary],
+    ["services", item.services || item.coreServices],
+    ["serviceArea", item.serviceArea || item.serviceAreas],
+    ["reviewRating", item.reviewRating || item.rating],
+    ["reviewCount", item.reviewCount || item.reviews],
+    ["reviewHighlights", item.reviewHighlights || item.reviewThemes],
+    ["monthlyVisitors", item.monthlyVisitors || item.traffic || item.visits],
+    ["trafficTrend", item.trafficTrend],
+    ["trafficSources", item.trafficSources || item.channels],
+    ["trustSignals", item.trustSignals || item.proof],
+    ["conversionGaps", item.conversionGaps || item.websiteGaps],
+    ["competitors", item.competitors || item.competitorNotes],
+    ["recommendedOffer", item.recommendedOffer || item.offer],
+    ["offerAngle", item.offerAngle || item.salesAngle],
+  ];
+
+  const lines = mappings
+    .filter(([, value]) => String(value || "").trim())
+    .map(([label, value]) => `${label}: ${String(value).trim()}`);
+
+  return lines.length ? `MANUS RESEARCH\n${lines.join("\n")}` : "";
 }
 
 function parseCsv(text) {
@@ -1491,4 +1670,8 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replaceAll("`", "&#096;");
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
