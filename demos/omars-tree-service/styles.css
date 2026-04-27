@@ -181,7 +181,7 @@ h3 {
   min-height: 520px;
   background:
     linear-gradient(180deg, rgba(16, 42, 32, 0.05), rgba(16, 42, 32, 0.42)),
-    url("https://lirp.cdn-website.com/8a5e9d54/dms3rep/multi/opt/10201043203941366-1032x581-1920w.jpg")
+    url("./assets/hero-tree-removal.jpg")
       center / cover;
 }
 
