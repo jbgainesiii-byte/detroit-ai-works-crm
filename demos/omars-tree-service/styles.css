@@ -307,6 +307,127 @@ form {
   line-height: 1.45;
 }
 
+.mockup-section .section-heading p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.mockup-frame {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.mockup-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #f0f3ed;
+}
+
+.mockup-toolbar span {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #cfd9ce;
+}
+
+.mockup-toolbar strong {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.mockup-screen {
+  min-height: 560px;
+  background:
+    linear-gradient(90deg, rgba(16, 42, 32, 0.94) 0%, rgba(16, 42, 32, 0.72) 44%, rgba(16, 42, 32, 0.08) 100%),
+    url("./assets/hero-wide-crew.jpg") center / cover;
+}
+
+.mockup-hero {
+  max-width: 620px;
+  padding: 54px;
+  color: white;
+}
+
+.mockup-hero p {
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mockup-hero h3 {
+  margin-top: 12px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.98;
+}
+
+.mockup-hero div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.mockup-hero span {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: var(--gold);
+  color: #1b1305;
+  font-size: 0.86rem;
+  font-weight: 1000;
+}
+
+.mockup-hero span:last-child {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+}
+
+.mockup-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 54px 18px;
+}
+
+.mockup-cards article,
+.mockup-proof strong {
+  min-height: 82px;
+  display: flex;
+  align-items: end;
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--leaf-dark);
+  font-weight: 1000;
+}
+
+.mockup-proof {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 54px 54px;
+}
+
+.mockup-proof strong {
+  min-height: 62px;
+  align-items: center;
+  background: rgba(38, 83, 61, 0.86);
+  color: white;
+}
+
 .split-section {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
@@ -448,8 +569,16 @@ footer a {
 
   .service-grid,
   .proof-grid,
+  .mockup-cards,
+  .mockup-proof,
   .process-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mockup-hero,
+  .mockup-cards,
+  .mockup-proof {
+    padding-inline: 20px;
   }
 }
 
