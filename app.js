@@ -266,6 +266,7 @@ const elements = {
   downloadJsonButton: document.querySelector("#downloadJsonButton"),
   importInput: document.querySelector("#importInput"),
   resetButton: document.querySelector("#resetButton"),
+  clearSharedButton: document.querySelector("#clearSharedButton"),
   scriptList: document.querySelector("#scriptList"),
   rebuttalList: document.querySelector("#rebuttalList"),
   promptList: document.querySelector("#promptList"),
@@ -333,6 +334,7 @@ function bindEvents() {
   elements.form.addEventListener("submit", saveProspect);
   elements.importInput.addEventListener("change", importJson);
   elements.resetButton.addEventListener("click", resetCrm);
+  elements.clearSharedButton.addEventListener("click", clearSharedCrm);
 }
 
 function switchView(viewName) {
@@ -1597,12 +1599,43 @@ function csvEscape(value) {
 }
 
 function resetCrm() {
-  if (!confirm("Reset this CRM and reload starter examples?")) return;
+  if (!confirm("Reset this browser and reload starter examples? This does not clear the shared database.")) return;
   prospects = starterProspects.map((item) => ({ ...item, id: crypto.randomUUID() }));
   persist();
   activeStageFilter = "All";
   renderStageFilters();
   render();
+}
+
+async function clearSharedCrm() {
+  const firstConfirm = confirm(
+    "This will permanently delete every prospect from the shared Supabase CRM for everyone. Continue?"
+  );
+  if (!firstConfirm) return;
+
+  const typed = prompt('Type DELETE to clear the shared CRM.');
+  if (typed !== "DELETE") return;
+
+  setSyncStatus("Deleting", "Clearing all shared prospects from Supabase...");
+
+  try {
+    await supabaseRequest("/rest/v1/prospects?id=not.is.null", {
+      method: "DELETE",
+      headers: {
+        Prefer: "return=minimal",
+      },
+    });
+    prospects = [];
+    persist();
+    activeProspectId = "";
+    activeStageFilter = "All";
+    renderStageFilters();
+    render();
+    setSyncStatus("Shared", "Shared CRM is clear. You can import a fresh Manus sheet.");
+  } catch {
+    setSyncStatus("Delete failed", "Supabase did not clear the shared prospects. Check database permissions.");
+    alert("The shared CRM could not be cleared. Supabase may be blocking deletes.");
+  }
 }
 
 async function copyToClipboard(text, button) {
