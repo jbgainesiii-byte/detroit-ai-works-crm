@@ -232,6 +232,7 @@ const elements = {
     dashboard: document.querySelector("#dashboardView"),
     pipeline: document.querySelector("#pipelineView"),
     prospects: document.querySelector("#prospectsView"),
+    noWebsite: document.querySelector("#noWebsiteView"),
     account: document.querySelector("#accountView"),
     playbook: document.querySelector("#playbookView"),
     settings: document.querySelector("#settingsView"),
@@ -246,6 +247,7 @@ const elements = {
   dueList: document.querySelector("#dueList"),
   hotList: document.querySelector("#hotList"),
   noWebsiteList: document.querySelector("#noWebsiteList"),
+  noWebsiteBoard: document.querySelector("#noWebsiteBoard"),
   showDueButton: document.querySelector("#showDueButton"),
   pipelineBoard: document.querySelector("#pipelineBoard"),
   accountWorkspace: document.querySelector("#accountWorkspace"),
@@ -356,6 +358,7 @@ function render() {
   renderSalesCharts();
   renderPipeline();
   renderProspectTable();
+  renderNoWebsiteView();
   renderAccountWorkspace();
   renderNextAction();
 }
@@ -437,13 +440,53 @@ function renderDashboard() {
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   elements.hotList.innerHTML = renderList(hot.slice(0, 6), "No hot leads yet.");
 
-  const noWebsiteLeads = prospects
-    .filter((item) => isNoWebsiteLead(item))
-    .sort((a, b) => Number(getResearchValue(b, "reviewCount") || 0) - Number(getResearchValue(a, "reviewCount") || 0));
+  const noWebsiteLeads = getNoWebsiteLeads();
   elements.noWebsiteList.innerHTML = renderList(
     noWebsiteLeads.slice(0, 6),
     "No no-website leads yet. Manus can find businesses with strong Google reviews and no owned site."
   );
+}
+
+function renderNoWebsiteView() {
+  if (!elements.noWebsiteBoard) return;
+  const leads = getNoWebsiteLeads();
+
+  if (!leads.length) {
+    elements.noWebsiteBoard.innerHTML = `
+      <div class="empty-state">
+        No no-website leads yet. Import a Manus sheet with leadType "No website / good reviews" or leave website blank for strong-review businesses.
+      </div>
+    `;
+    return;
+  }
+
+  elements.noWebsiteBoard.innerHTML = leads
+    .map((item) => {
+      const dossier = buildBusinessDossier(item);
+      return `
+        <article class="no-website-card">
+          <div class="item-row">
+            <div>
+              <strong>${escapeHtml(item.businessName)}</strong>
+              <div class="item-meta">${escapeHtml(item.niche || "No niche")} · ${escapeHtml(item.city || "No city")}</div>
+            </div>
+            <span class="badge ${item.score >= 80 ? "hot" : ""}">${Number(item.score || 0)}</span>
+          </div>
+          <div class="no-website-card-grid">
+            ${renderIntelCard("Review proof", dossier.reviewSignal)}
+            ${renderIntelCard("Credibility gap", item.issue || dossier.websiteIssue)}
+            ${renderIntelCard("Starter offer", dossier.recommendedOffer || "$900 Starter Credibility Site")}
+            ${renderIntelCard("Talking angle", dossier.offerAngle)}
+          </div>
+          <div class="card-actions">
+            ${renderAdvanceButton(item)}
+            <button class="mini-button" data-account="${item.id}" type="button">Open workspace</button>
+            <button class="text-button" data-edit="${item.id}" type="button">Edit</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function renderSalesCharts() {
@@ -471,6 +514,16 @@ function renderSalesCharts() {
     ),
     "No owner data yet."
   );
+}
+
+function getNoWebsiteLeads() {
+  return prospects
+    .filter((item) => isNoWebsiteLead(item))
+    .sort(
+      (a, b) =>
+        Number(getResearchValue(b, "reviewCount") || 0) - Number(getResearchValue(a, "reviewCount") || 0) ||
+        Number(b.score || 0) - Number(a.score || 0)
+    );
 }
 
 function renderBarChart(items, emptyMessage) {
@@ -1872,6 +1925,7 @@ function getViewLabel(value) {
     dashboard: "Dashboard",
     pipeline: "Pipeline",
     prospects: "Prospects",
+    noWebsite: "No Website",
     account: "Account",
     playbook: "Playbook",
     settings: "Data",

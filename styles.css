@@ -438,7 +438,8 @@ textarea:focus {
 
 .two-column,
 .settings-grid,
-.playbook-layout {
+.playbook-layout,
+.no-website-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
@@ -789,6 +790,45 @@ textarea:focus {
   gap: 10px;
 }
 
+.no-website-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  align-items: start;
+}
+
+.no-website-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.no-website-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.talk-track-list {
+  display: grid;
+  gap: 10px;
+}
+
+.talk-track-list article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.talk-track-list p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .contact-line {
   border-bottom: 1px solid var(--line);
   display: grid;
@@ -1052,6 +1092,8 @@ label {
   .account-grid,
   .intel-grid,
   .brief-grid,
+  .no-website-layout,
+  .no-website-card-grid,
   .roi-grid,
   .settings-grid,
   .playbook-layout,
