@@ -674,6 +674,7 @@ function renderAccountWorkspace() {
   const callScript = buildCallScript(item);
   const aiPrompt = buildResearchPrompt(item);
   const dossier = buildBusinessDossier(item);
+  const roi = buildRoiModel(item, dossier);
 
   elements.accountWorkspace.innerHTML = `
     <section class="account-hero">
@@ -732,7 +733,7 @@ function renderAccountWorkspace() {
         <div class="panel-heading">
           <div>
             <p class="eyebrow">360 Brief</p>
-            <h3>Business Research</h3>
+            <h3>Business And Website Research</h3>
           </div>
         </div>
         <div class="brief-grid">
@@ -745,6 +746,55 @@ function renderAccountWorkspace() {
           ${renderBriefBlock("Offer angle", dossier.offerAngle)}
           ${renderBriefBlock("Notes", item.notes || "Add Manus research, call notes, objections, and business context here.")}
         </div>
+      </article>
+
+      <article class="panel offer-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Proposed Offer</p>
+            <h3>What We Pitch</h3>
+          </div>
+        </div>
+        <div class="offer-stack">
+          ${renderBriefBlock("Primary offer", dossier.recommendedOffer)}
+          ${renderBriefBlock("Why this offer", dossier.offerAngle)}
+          ${renderBriefBlock("What the demo should prove", buildDemoProof(item, dossier))}
+        </div>
+      </article>
+
+      <article class="panel roi-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Money Math</p>
+            <h3>Simple ROI Calculator</h3>
+          </div>
+        </div>
+        <div class="roi-grid">
+          ${renderRoiMetric("Estimated job value", roi.jobValue)}
+          ${renderRoiMetric("Extra leads needed", roi.leadsNeeded)}
+          ${renderRoiMetric("Break-even target", roi.breakEven)}
+        </div>
+        <p class="muted roi-note">${escapeHtml(roi.note)}</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Upsells</p>
+            <h3>Next Offers</h3>
+          </div>
+        </div>
+        <div class="upsell-list">${renderUpsells(item, dossier)}</div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Javon Talk Track</p>
+            <h3>Terms To Explain</h3>
+          </div>
+        </div>
+        <div class="terms-list">${renderSalesTerms()}</div>
       </article>
 
       <article class="panel">
@@ -799,6 +849,51 @@ function renderBriefBlock(label, value) {
       <p>${escapeHtml(value || "Not researched yet.")}</p>
     </div>
   `;
+}
+
+function renderRoiMetric(label, value) {
+  return `
+    <div class="roi-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function renderUpsells(item, dossier) {
+  return getUpsells(item, dossier)
+    .map(
+      (upsell) => `
+        <div class="upsell-item">
+          <strong>${escapeHtml(upsell.title)}</strong>
+          <p>${escapeHtml(upsell.body)}</p>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderSalesTerms() {
+  const terms = [
+    ["Landing page", "A focused page built to get one action: call, quote request, or booking."],
+    ["CTA", "Call to action. The button or prompt that tells visitors what to do next."],
+    ["Conversion", "When a visitor turns into a lead, call, form fill, booking, or quote request."],
+    ["Trust signals", "Reviews, photos, guarantees, years in business, licenses, and proof that the company is real."],
+    ["Local SEO", "Making the site clearer to Google for city plus service searches like Detroit tree removal."],
+    ["Lead capture", "A form, phone CTA, or booking path that collects customer interest."],
+    ["Care plan", "Monthly support for hosting, edits, small updates, backups, and keeping the site useful."],
+  ];
+
+  return terms
+    .map(
+      ([term, meaning]) => `
+        <div class="term-item">
+          <strong>${escapeHtml(term)}</strong>
+          <p>${escapeHtml(meaning)}</p>
+        </div>
+      `
+    )
+    .join("");
 }
 
 function renderContactLine(label, value) {
@@ -929,6 +1024,87 @@ function buildBusinessDossier(item) {
     competitors: getResearchValue(item, "competitors") || "Add nearby competitors with stronger websites or better proof.",
     offerAngle: getResearchValue(item, "offerAngle") || inferOfferAngle(item),
   };
+}
+
+function buildDemoProof(item, dossier) {
+  if (isNoWebsiteLead(item)) {
+    return "Show a clean credibility page with reviews, services, service area, click-to-call, and a quote form.";
+  }
+  if (/emergency|tree|hvac|plumb|electric/i.test(`${item.niche} ${item.notes}`)) {
+    return "Show a faster emergency/service call path, stronger proof, and clear mobile CTAs.";
+  }
+  if (/gallery|photo|before|after|proof/i.test(`${dossier.conversionGaps} ${dossier.trustSignals}`)) {
+    return "Show their work visually with reviews, project proof, service cards, and a simple quote request.";
+  }
+  return "Show that the business can look more credible, explain services faster, and collect better leads.";
+}
+
+function buildRoiModel(item, dossier) {
+  const price = getOfferPrice(dossier.recommendedOffer || item.quote);
+  const jobValue = getEstimatedJobValue(item);
+  const closeRate = 0.25;
+  const leadsNeeded = Math.max(1, Math.ceil(price / (jobValue * closeRate)));
+  const breakEven = `${leadsNeeded} qualified lead${leadsNeeded === 1 ? "" : "s"}`;
+  const monthlyCare = /care|month|mo/i.test(dossier.recommendedOffer || item.quote || "") ? 149 : 0;
+  const extraJobValue = jobValue - monthlyCare;
+
+  return {
+    jobValue: formatMoney(jobValue),
+    leadsNeeded: `${leadsNeeded}`,
+    breakEven,
+    note: `If one closed job is worth about ${formatMoney(jobValue)}, the project can make sense with roughly ${breakEven} at a 25% close rate. After launch, one extra job per month could be worth about ${formatMoney(extraJobValue)} before labor/material costs.`,
+  };
+}
+
+function getOfferPrice(value) {
+  const match = String(value || "").match(/\$?([0-9][0-9,]*)/);
+  return match ? Number(match[1].replaceAll(",", "")) : 1500;
+}
+
+function getEstimatedJobValue(item) {
+  const text = `${item.niche} ${item.notes} ${item.issue}`.toLowerCase();
+  if (/roof|window|concrete|hardscape|paver|remodel|basement|waterproof/.test(text)) return 3500;
+  if (/hvac|tree|electric|plumb|fence|floor|insulation|garage/.test(text)) return 1800;
+  if (/landscap|lawn|power wash|pressure|junk|paint|clean/.test(text)) return 900;
+  return 1200;
+}
+
+function getUpsells(item, dossier) {
+  const text = `${item.niche} ${item.notes} ${dossier.conversionGaps}`.toLowerCase();
+  const upsells = [
+    {
+      title: "$149/mo Care Plan",
+      body: "Hosting support, small edits, backups, seasonal updates, and keeping the site from going stale.",
+    },
+    {
+      title: "Google Review Engine",
+      body: "Simple follow-up system that helps request reviews after jobs and turns trust proof into more calls.",
+    },
+    {
+      title: "Local SEO Service Pages",
+      body: "Dedicated city and service pages so the business can show up for searches tied to profitable jobs.",
+    },
+  ];
+
+  if (/tree|hvac|plumb|electric|garage/.test(text)) {
+    upsells.unshift({
+      title: "Emergency Lead Capture",
+      body: "Urgent-service page with call tracking, fast mobile CTA, and a missed-call follow-up workflow.",
+    });
+  }
+
+  if (/photo|gallery|before|after|project|proof|landscap|hardscape|roof|floor|paint/.test(text)) {
+    upsells.unshift({
+      title: "Project Gallery Buildout",
+      body: "Before/after proof, service photos, and project stories that make the business easier to trust.",
+    });
+  }
+
+  return upsells.slice(0, 4);
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 }
 
 function inferLeadType(item) {

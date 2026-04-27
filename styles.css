@@ -691,6 +691,13 @@ textarea:focus {
   gap: 12px;
 }
 
+.offer-stack,
+.upsell-list,
+.terms-list {
+  display: grid;
+  gap: 12px;
+}
+
 .intel-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -726,6 +733,55 @@ textarea:focus {
 .brief-block p {
   line-height: 1.5;
   white-space: pre-wrap;
+}
+
+.roi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.roi-metric,
+.upsell-item,
+.term-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px;
+}
+
+.roi-metric {
+  display: grid;
+  gap: 6px;
+}
+
+.roi-metric span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.roi-metric strong {
+  color: var(--accent-dark);
+  font-size: 1.28rem;
+}
+
+.roi-note {
+  margin-top: 12px;
+}
+
+.upsell-item,
+.term-item {
+  display: grid;
+  gap: 5px;
+}
+
+.upsell-item p,
+.term-item p {
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .contact-list {
@@ -996,6 +1052,7 @@ label {
   .account-grid,
   .intel-grid,
   .brief-grid,
+  .roi-grid,
   .settings-grid,
   .playbook-layout,
   .stage-guide {
